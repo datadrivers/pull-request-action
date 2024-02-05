@@ -84,8 +84,10 @@ runs:
         # Print out all branches
         git --no-pager branch -a -vv
 
-        if [ "$(git rev-parse --revs-only "$SOURCE_BRANCH")" = "$(git rev-parse --revs-only "$DESTINATION_BRANCH")" ]; then
-          echo "Source and destination branches are the same."
+        SOURCE_REV=$(git rev-parse --revs-only "$SOURCE_BRANCH")
+        DESTINATION_REV=$(git rev-parse --revs-only "$DESTINATION_BRANCH")
+        if [ "$SOURCE_REV" = "$DESTINATION_REV" ]; then
+          echo "Source and destination branches are the same. Source rev: $SOURCE_REV, Destination rev: $DESTINATION_REV"
           exit 0
         fi
 
@@ -99,7 +101,6 @@ runs:
         # Workaround for `hub` auth error https://github.com/github/hub/issues/2149#issuecomment-513214342
         export GITHUB_USER="$GITHUB_ACTOR"
 
-        # set -x
         declare -a COMMAND
         COMMAND+=(gh pr create --base $DESTINATION_BRANCH --head $SOURCE_BRANCH --no-maintainer-edit)
 
@@ -146,20 +147,32 @@ runs:
         }
 
         set +e
-        catch PR_URL pr_command_error "${COMMAND[@]}"
+        catch pr_command_output pr_command_error "${COMMAND[@]}"
         pr_command_exit_code=$?
         set -e
-        echo "Output of github cli command: " ${PR_URL} ${pr_command_error}
-        echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
-        echo "pr_number=${PR_URL##*/}" >> "$GITHUB_OUTPUT"
+        set -x
+        echo "Output of github cli command: " ${pr_command_output} ${pr_command_error}
+        pr_already_exists=$(echo "${pr_command_error}" | grep -c "already exists:")
+        if [[ "$pr_command_exit_code" -eq 0 ]];
+        then
+          pr_url="${pr_command_output}"
+          pr_number="${pr_command_output##*/}"
+        elif [[ "$pr_already_exists" -eq 1 ]];
+        then
+          pr_url=$(echo "$pr_command_error" | grep -o 'https://github.com[^ ]*')
+          pr_number=${pr_url##*/}
+        fi
+        echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+        echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
         if [[ "$LINES_CHANGED" = "0" ]]; then
           echo "has_changed_files=false" >> "$GITHUB_OUTPUT"
         else
           echo "has_changed_files=true" >> "$GITHUB_OUTPUT"
         fi
-        if [[ "$pr_command_exit_code" != "0" ]]; then
+        if [[ "$pr_command_exit_code" != "0" && "$pr_already_exists" -eq 0 ]]; then
           exit 1
         fi
+        # assume that if we got here, a PR was created
         echo "pr_created=true" >> "$GITHUB_OUTPUT"
       shell: bash
 
