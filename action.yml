@@ -57,7 +57,6 @@ runs:
       run: |
         set -e
         set -o pipefail
-        set -x
 
         echo "::group::Gather Inputs"
         if [[ ! -z "$GITHUB_HEAD_REF" ]]; then
