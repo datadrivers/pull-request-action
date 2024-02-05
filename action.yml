@@ -150,7 +150,7 @@ runs:
         catch pr_command_output pr_command_error "${COMMAND[@]}"
         pr_command_exit_code=$?
         set -e
-        set -x
+
         echo "Output of github cli command: " ${pr_command_output} ${pr_command_error}
         pr_already_exists=$(echo "${pr_command_error}" | grep -c "already exists:")
         if [[ "$pr_command_exit_code" -eq 0 ]];
