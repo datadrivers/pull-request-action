@@ -1,14 +1,16 @@
 # Pull Request Action
 
-[![Action test on Ubuntu](https://github.com/GuillaumeFalourd/pull-request-action/actions/workflows/ubuntu_action_test.yml/badge.svg)](https://github.com/GuillaumeFalourd/pull-request-action/actions/workflows/ubuntu_action_test.yml) [![Action test on MacOS](https://github.com/GuillaumeFalourd/pull-request-action/actions/workflows/macos_action_test.yml/badge.svg)](https://github.com/GuillaumeFalourd/pull-request-action/actions/workflows/macos_action_test.yml) [![Action test on Windows](https://github.com/GuillaumeFalourd/pull-request-action/actions/workflows/windows_action_test.yml/badge.svg)](https://github.com/GuillaumeFalourd/pull-request-action/actions/workflows/windows_action_test.yml)
+[![Action test on Ubuntu](https://github.com/datadrivers/pull-request-action/actions/workflows/ubuntu_action_test.yml/badge.svg)](https://github.com/datadrivers/pull-request-action/actions/workflows/ubuntu_action_test.yml) [![Action test on MacOS](https://github.com/datadrivers/pull-request-action/actions/workflows/macos_action_test.yml/badge.svg)](https://github.com/datadrivers/pull-request-action/actions/workflows/macos_action_test.yml) [![Action test on Windows](https://github.com/datadrivers/pull-request-action/actions/workflows/windows_action_test.yml/badge.svg)](https://github.com/datadrivers/pull-request-action/actions/workflows/windows_action_test.yml)
 
 ![](https://user-images.githubusercontent.com/22433243/157692326-2e75f43d-e563-4fa9-8947-67c06e4e469f.png)
 
-☞ Github Actions to create pull request using Github CLI ⤵️ 
+☞ Github Actions to create pull request using Github CLI ⤵️
 
 _**Note**: This action is supported on **all runners** operating systems (`ubuntu`, `macos`, `windows`)_
 
 _Inspired from [https://github.com/repo-sync/pull-request](https://github.com/repo-sync/pull-request)_
+
+_Original Code from [github.com/GuillaumeFalourd/pull-request-action](https://github.com/GuillaumeFalourd/pull-request-action)_
 
 ## 📝 Features
 
@@ -31,7 +33,7 @@ _Inspired from [https://github.com/repo-sync/pull-request](https://github.com/re
 ### Minimum configurations
 
 ```yaml
-    - uses: GuillaumeFalourd/pull-request-action@v1
+    - uses: datadrivers/pull-request-action@v2
       with:
         destination_branch: "main"
       env:
@@ -41,7 +43,7 @@ _Inspired from [https://github.com/repo-sync/pull-request](https://github.com/re
 ### Full configurations
 
 ```yaml
-    - uses: GuillaumeFalourd/pull-request-action@v1
+    - uses: datadrivers/pull-request-action@v2
       with:
         source_branch: "main"                             # If blank, default: triggered branch
         destination_branch: "feature"                     # If blank, default: main
@@ -59,16 +61,16 @@ _Inspired from [https://github.com/repo-sync/pull-request](https://github.com/re
 
 ## 🤝 Contributing
 
-☞ If you're interested in contributing to this repository, please follow the [guidelines](https://github.com/GuillaumeFalourd/pull-request-action/blob/main/CONTRIBUTING.md)
+☞ If you're interested in contributing to this repository, please follow the [guidelines](https://github.com/datadrivers/pull-request-action/blob/main/CONTRIBUTING.md)
 
 ## 🏅 Licensed
 
-☞ This repository uses the [Apache License 2.0](https://github.com/GuillaumeFalourd/pull-request-action/blob/main/LICENSE)
+☞ This repository uses the [Apache License 2.0](https://github.com/datadrivers/pull-request-action/blob/main/LICENSE)
 
 <!-- ### Contribuidores
 
-<a href="https://github.com/GuillaumeFalourd/pull-request-action/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=GuillaumeFalourd/pull-request-action" />
+<a href="https://github.com/datadrivers/pull-request-action/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=datadrivers/pull-request-action" />
 </a>
 
 (Criado com [contributors-img](https://contrib.rocks)) -->
