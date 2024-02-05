@@ -57,7 +57,7 @@ runs:
       run: |
         set -e
         set -o pipefail
-
+        set -x
         if [[ ! -z "${{ inputs.source_branch }}" ]]; then
           SOURCE_BRANCH="${{ inputs.source_branch }}"
         elif [[ ! -z "$GITHUB_REF" ]]; then
