@@ -6,6 +6,7 @@ inputs:
   source_branch:
     description: Branch name to pull from, default is triggered branch
     required: false
+    default: ${{ github.ref_name }}
   destination_branch:
     description: Branch name to sync to in this repo, default is main
     required: false
@@ -60,8 +61,8 @@ runs:
         set -x
         if [[ ! -z "${{ inputs.source_branch }}" ]]; then
           SOURCE_BRANCH="${{ inputs.source_branch }}"
-        elif [[ ! -z "$GITHUB_REF" ]]; then
-          SOURCE_BRANCH=${GITHUB_REF/refs\/heads\//}  # Remove branch prefix
+        elif [[ ! -z "$GITHUB_REF_NAME" ]]; then
+          SOURCE_BRANCH=${GITHUB_REF_NAME}
         else
           echo "Set the ${{ inputs.source_branch }} environment variable or trigger from a branch."
           exit 1
