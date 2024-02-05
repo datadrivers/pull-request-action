@@ -6,7 +6,6 @@ inputs:
   source_branch:
     description: Branch name to pull from, default is triggered branch
     required: false
-    default: ${{ github.ref_name }}
   destination_branch:
     description: Branch name to sync to in this repo, default is main
     required: false
@@ -59,22 +58,25 @@ runs:
         set -e
         set -o pipefail
         set -x
-        if [[ ! -z "${{ inputs.source_branch }}" ]]; then
-          SOURCE_BRANCH="${{ inputs.source_branch }}"
-        elif [[ ! -z "$GITHUB_REF_NAME" ]]; then
-          SOURCE_BRANCH=${GITHUB_REF_NAME}
+
+        echo "::group::Gather Inputs"
+
+        if [[ ! -z "$INPUT_SOURCE_BRANCH" ]]; then
+          SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
+        elif [[ ! -z "$GITHUB_REF" ]]; then
+          SOURCE_BRANCH=${GITHUB_REF/refs\/heads\//}  # Remove branch prefix
         else
-          echo "Set the ${{ inputs.source_branch }} environment variable or trigger from a branch."
+          echo_fail "Set the INPUT_SOURCE_BRANCH environment variable or trigger from a branch."
           exit 1
         fi
+        echo "SOURCE_BRANCH=$SOURCE_BRANCH"
 
-        if [[ ! -z "${{ inputs.destination_branch }}" ]]; then
-          DESTINATION_BRANCH="${{ inputs.destination_branch }}"
-        else
-          DESTINATION_BRANCH="main"
-        fi
-        # init pr_created bool
+        DESTINATION_BRANCH="${INPUT_DESTINATION_BRANCH:-"main"}"
+        echo "DESTINATION_BRANCH=$DESTINATION_BRANCH"
+
+        # init pr_created bool for output
         echo "pr_created=false" >> "$GITHUB_OUTPUT"
+        echo "::endgroup::"
 
         echo "::group::Configure git"
         # Github actions no longer auto set the username and GITHUB_TOKEN
