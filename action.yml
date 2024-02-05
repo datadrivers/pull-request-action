@@ -60,8 +60,9 @@ runs:
         set -x
 
         echo "::group::Gather Inputs"
-
-        if [[ ! -z "$INPUT_SOURCE_BRANCH" ]]; then
+        if [[ ! -z "$GITHUB_HEAD_REF" ]]; then
+          SOURCE_BRANCH="$GITHUB_HEAD_REF"
+        elif [[ ! -z "$INPUT_SOURCE_BRANCH" ]]; then
           SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
         elif [[ ! -z "$GITHUB_REF" ]]; then
           SOURCE_BRANCH=${GITHUB_REF/refs\/heads\//}  # Remove branch prefix
