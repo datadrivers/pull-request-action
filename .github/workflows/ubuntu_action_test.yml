@@ -11,14 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./
+        id: pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo -e "Output of pr job is:\n${{ tojson(steps.pr.outputs) }}"
 
   ubuntu-max:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./
+        id: pr
         with:
           pr_title: "Pulling ${{ github.ref_name }} into main"
           pr_body: "An automated PR"
@@ -30,3 +33,4 @@ jobs:
           pr_allow_empty: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo -e "Output of pr job is:\n${{ tojson(steps.pr.outputs) }}"

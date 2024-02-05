@@ -99,49 +99,57 @@ runs:
         # Workaround for `hub` auth error https://github.com/github/hub/issues/2149#issuecomment-513214342
         export GITHUB_USER="$GITHUB_ACTOR"
 
-        COMMAND="gh pr create --base $DESTINATION_BRANCH --head $SOURCE_BRANCH --no-maintainer-edit"
+        # set -x
+        declare -a COMMAND
+        COMMAND+=(gh pr create --base $DESTINATION_BRANCH --head $SOURCE_BRANCH --no-maintainer-edit)
 
         if [[ ! -z "${{ inputs.pr_title }}" ]]; then
-          COMMAND="$COMMAND --title \"${{ inputs.pr_title }}\""
+          COMMAND+=(--title "${{ inputs.pr_title }}")
         else
-          COMMAND="$COMMAND --fill"
+          COMMAND+=(--fill)
         fi
 
         if [[ ! -z "${{ inputs.pr_body }}" ]]; then
-          COMMAND="$COMMAND --body \"${{ inputs.pr_body }}\""
+          COMMAND+=(--body "${{ inputs.pr_body }}")
         fi
 
         if [[ ! -z "${{ inputs.pr_reviewer }}" ]]; then
-          COMMAND="$COMMAND --reviewer \"${{ inputs.pr_reviewer }}\""
+          COMMAND+=(--reviewer "${{ inputs.pr_reviewer }}")
         fi
 
         if [[ ! -z "${{ inputs.pr_assignee }}" ]]; then
-          COMMAND="$COMMAND --assignee \"${{ inputs.pr_assignee }}\""
+          COMMAND+=(--assignee "${{ inputs.pr_assignee }}")
         fi
 
         if [[ ! -z "${{ inputs.pr_label }}" ]]; then
-          COMMAND="$COMMAND --label \"${{ inputs.pr_label }}\""
+          COMMAND+=(--label "${{ inputs.pr_label }}")
         fi
 
         if [[ ! -z "${{ inputs.pr_milestone }}" ]]; then
-          COMMAND="$COMMAND --milestone \"${{ inputs.pr_milestone }}\""
+          COMMAND+=(--milestone "${{ inputs.pr_milestone }}")
         fi
 
         if [[ "${{ inputs.pr_draft }}" == "true" ]]; then
-          COMMAND="$COMMAND --draft"
+          COMMAND+=(--draft)
         fi
 
-        COMMAND="$COMMAND || true"
+        echo "Command that will be executed: ${COMMAND[@]}"
 
-        echo "Command that will be executed:"
-        echo "$COMMAND"
+        # SYNTAX:
+        #   catch STDOUT_VARIABLE STDERR_VARIABLE COMMAND [ARG1[ ARG2[ ...[ ARGN]]]]
+        catch() {
+            {
+                IFS=$'\n' read -r -d '' "${1}";
+                IFS=$'\n' read -r -d '' "${2}";
+                (IFS=$'\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+            } < <((printf '\0%s\0%d\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\0' 1>&4-) 4>&2- 2>&1- | tr -d '\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+        }
 
-        PR_URL=$(sh -c "$COMMAND")
-        if [[ "$?" != "0" ]]; then
-          exit 1
-        fi
-        echo "pr_created=true" >> "$GITHUB_OUTPUT"
-        echo ${PR_URL}
+        set +e
+        catch PR_URL pr_command_error "${COMMAND[@]}"
+        pr_command_exit_code=$?
+        set -e
+        echo "Output of github cli command: " ${PR_URL} ${pr_command_error}
         echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
         echo "pr_number=${PR_URL##*/}" >> "$GITHUB_OUTPUT"
         if [[ "$LINES_CHANGED" = "0" ]]; then
@@ -149,6 +157,10 @@ runs:
         else
           echo "has_changed_files=true" >> "$GITHUB_OUTPUT"
         fi
+        if [[ "$pr_command_exit_code" != "0" ]]; then
+          exit 1
+        fi
+        echo "pr_created=true" >> "$GITHUB_OUTPUT"
       shell: bash
 
 branding:
