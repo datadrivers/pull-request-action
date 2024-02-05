@@ -1,9 +1,7 @@
 name: Action test on Windows
 
 on:
-  schedule:
-    - cron: "0 6 * * MON-FRI" # Runs at 06:00 UTC
-  push:
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -11,22 +9,17 @@ jobs:
   windows-min:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: GuillaumeFalourd/pull-request-action@main
-        with:
-          source_branch: "main"
-          destination_branch: "test-windows-min"
+      - uses: actions/checkout@v4
+      - uses: ./
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   windows-max:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: GuillaumeFalourd/pull-request-action@main
+      - uses: actions/checkout@v4
+      - uses: ./
         with:
-          source_branch: "main"
-          destination_branch: "test-windows-max"
           pr_title: "Pulling ${{ github.ref }} into main"
           pr_body: "An automated PR"
           pr_reviewer: "GuillaumeFalourd"
