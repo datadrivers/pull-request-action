@@ -84,8 +84,10 @@ runs:
         # Print out all branches
         git --no-pager branch -a -vv
 
-        if [ "$(git rev-parse --revs-only "$SOURCE_BRANCH")" = "$(git rev-parse --revs-only "$DESTINATION_BRANCH")" ]; then
-          echo "Source and destination branches are the same."
+        SOURCE_REV=$(git rev-parse --revs-only "$SOURCE_BRANCH")
+        DESTINATION_REV=$(git rev-parse --revs-only "$DESTINATION_BRANCH")
+        if [ "$SOURCE_REV" = "$DESTINATION_REV" ]; then
+          echo "Source and destination branches are the same. Source rev: $SOURCE_REV, Destination rev: $DESTINATION_REV"
           exit 0
         fi
 
@@ -157,7 +159,8 @@ runs:
         else
           echo "has_changed_files=true" >> "$GITHUB_OUTPUT"
         fi
-        if [[ "$pr_command_exit_code" != "0" ]]; then
+        pr_already_exists=$(echo "${pr_command_error}" | grep -c "already exists:")
+        if [[ "$pr_command_exit_code" != "0" && "$pr_already_exists" -eq 0 ]]; then
           exit 1
         fi
         echo "pr_created=true" >> "$GITHUB_OUTPUT"
