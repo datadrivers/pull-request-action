@@ -100,6 +100,8 @@ runs:
           fi
         }
 
+        env
+
         enable_debug
 
         # init bool var to check if PR creation should be skipped
@@ -147,7 +149,7 @@ runs:
 
         # skip pr creation if there are no file differences, this avoids PRs with just a merge commit and no content
         LINES_CHANGED=$(git diff --name-only "$DESTINATION_BRANCH" "$SOURCE_BRANCH" -- | wc -l | awk '{print $1}')
-        if [[ "$LINES_CHANGED" = "0" ]] && [[ ! "${{ inputs.pr_allow_empty }}" ==  "true" ]]; then
+        if [[ "$LINES_CHANGED" = "0" ]] && [[ ! "${ INPUT_pr_allow_empty }" ==  "true" ]]; then
           echo_info "No file changes detected between source and destination branches and pr_allow_empty is not set to true. Skipping PR creation."
           skip_pr_creation=true
         fi
@@ -166,33 +168,33 @@ runs:
         declare -a COMMAND
         COMMAND+=(gh pr create --base $DESTINATION_BRANCH --head $SOURCE_BRANCH --no-maintainer-edit)
 
-        if [[ ! -z "${{ inputs.pr_title }}" ]]; then
-          COMMAND+=(--title "${{ inputs.pr_title }}")
+        if [[ ! -z "${ INPUT_pr_title }" ]]; then
+          COMMAND+=(--title "${ INPUT_pr_title }")
         else
           COMMAND+=(--fill)
         fi
 
-        if [[ ! -z "${{ inputs.pr_body }}" ]]; then
-          COMMAND+=(--body "${{ inputs.pr_body }}")
+        if [[ ! -z "${ INPUT_pr_body }" ]]; then
+          COMMAND+=(--body "${ INPUT_pr_body }")
         fi
 
-        if [[ ! -z "${{ inputs.pr_reviewer }}" ]]; then
-          COMMAND+=(--reviewer "${{ inputs.pr_reviewer }}")
+        if [[ ! -z "${ INPUT_pr_reviewer }" ]]; then
+          COMMAND+=(--reviewer "${ INPUT_pr_reviewer }")
         fi
 
-        if [[ ! -z "${{ inputs.pr_assignee }}" ]]; then
-          COMMAND+=(--assignee "${{ inputs.pr_assignee }}")
+        if [[ ! -z "${ INPUT_pr_assignee }" ]]; then
+          COMMAND+=(--assignee "${ INPUT_pr_assignee }")
         fi
 
-        if [[ ! -z "${{ inputs.pr_label }}" ]]; then
-          COMMAND+=(--label "${{ inputs.pr_label }}")
+        if [[ ! -z "${ INPUT_pr_label }" ]]; then
+          COMMAND+=(--label "${ INPUT_pr_label }")
         fi
 
-        if [[ ! -z "${{ inputs.pr_milestone }}" ]]; then
-          COMMAND+=(--milestone "${{ inputs.pr_milestone }}")
+        if [[ ! -z "${ INPUT_pr_milestone }" ]]; then
+          COMMAND+=(--milestone "${ INPUT_pr_milestone }")
         fi
 
-        if [[ "${{ inputs.pr_draft }}" == "true" ]]; then
+        if [[ "${ INPUT_pr_draft }" == "true" ]]; then
           COMMAND+=(--draft)
         fi
 
