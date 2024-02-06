@@ -108,9 +108,11 @@ runs:
           fi
         }
 
-        env
-
         enable_debug
+
+        if [[ $SHELLOPTS == *xtrace* ]]; then
+          env
+        fi
 
         # init bool var to check if PR creation should be skipped
         skip_pr_creation=false
