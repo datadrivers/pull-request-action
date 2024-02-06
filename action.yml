@@ -34,10 +34,6 @@ inputs:
   pr_allow_empty:
     description: Create PR even if no changes
     required: false
-  debug:
-    description: Enable debug output
-    required: false
-    default: false
 
 outputs:
   pr_url:
@@ -53,10 +49,22 @@ outputs:
     description: 'Boolean string indicating whether a PR was created'
     value: ${{ steps.pr-creation.outputs.pr_created }}
 
+
 runs:
   using: "composite"
   steps:
     - name: Create Pull Request ⤵️
+      env:
+        INPUT_SOURCE_BRANCH: ${{ inputs.source_branch }}
+        INPUT_DESTINATION_BRANCH: ${{ inputs.destination_branch }}
+        INPUT_PR_TITLE: ${{ inputs.pr_title }}
+        INPUT_PR_BODY: ${{ inputs.pr_body }}
+        INPUT_PR_REVIEWER: ${{ inputs.pr_reviewer }}
+        INPUT_PR_ASSIGNEE: ${{ inputs.pr_assignee }}
+        INPUT_PR_LABEL: ${{ inputs.pr_label }}
+        INPUT_PR_MILESTONE: ${{ inputs.pr_milestone }}
+        INPUT_PR_DRAFT: ${{ inputs.pr_draft }}
+        INPUT_PR_ALLOW_EMPTY: ${{ inputs.pr_allow_empty }}
       id: pr-creation
       run: |
         set -e
@@ -89,13 +97,13 @@ runs:
         echo_success() { printf "%b\n" "${color_green}✔ $(printf "%s\n" "$*")${reset_color}"; }
         echo_fail() { printf "%b\n" "${color_red}✖ $(printf "%s\n" "$*")${reset_color}"; }
         enable_debug() {
-          if [[ "${INPUT_DEBUG}" == "true" ]]; then
+          if [[ "${RUNNER_DEBUG}" == "true" ]]; then
             echo_info "Enabling debug mode."
             set -x
           fi
         }
         disable_debug() {
-          if [[ "${INPUT_DEBUG}" == "true" ]]; then
+          if [[ "${RUNNER_DEBUG}" == "true" ]]; then
             set +x
           fi
         }
@@ -110,19 +118,23 @@ runs:
 
         echo "::group::Gather Inputs"
 
-        if [[ ! -z "$GITHUB_HEAD_REF" && "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+        if [[ ! -z "${INPUT_SOURCE_BRANCH}" ]]; then
+          SOURCE_BRANCH="${INPUT_SOURCE_BRANCH}"
+        elif [[ ! -z "$GITHUB_HEAD_REF" && "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
           SOURCE_BRANCH="$GITHUB_HEAD_REF"
-        elif [[ ! -z "$INPUT_SOURCE_BRANCH" ]]; then
-          SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
         elif [[ ! -z "$GITHUB_REF" ]]; then
           SOURCE_BRANCH=${GITHUB_REF/refs\/heads\//}  # Remove branch prefix
         else
-          echo_fail "Set the INPUT_SOURCE_BRANCH environment variable or trigger from a branch."
+          echo_fail "Set the inputs.source_branch parameter or trigger from a branch."
           exit 1
         fi
         echo_info "SOURCE_BRANCH=$SOURCE_BRANCH"
 
-        DESTINATION_BRANCH="${INPUT_DESTINATION_BRANCH:-"main"}"
+        if [[ ! -z "${INPUT_DESTINATION_BRANCH}" ]]; then
+          DESTINATION_BRANCH="${INPUT_DESTINATION_BRANCH}"
+        else
+          DESTINATION_BRANCH="main"
+        fi
         echo_info "DESTINATION_BRANCH=$DESTINATION_BRANCH"
 
         echo "::endgroup::"
@@ -149,7 +161,7 @@ runs:
 
         # skip pr creation if there are no file differences, this avoids PRs with just a merge commit and no content
         LINES_CHANGED=$(git diff --name-only "$DESTINATION_BRANCH" "$SOURCE_BRANCH" -- | wc -l | awk '{print $1}')
-        if [[ "$LINES_CHANGED" = "0" ]] && [[ ! "${ INPUT_pr_allow_empty }" ==  "true" ]]; then
+        if [[ "$LINES_CHANGED" = "0" ]] && [[ ! "${INPUT_PR_ALLOW_EMPTY}" ==  "true" ]]; then
           echo_info "No file changes detected between source and destination branches and pr_allow_empty is not set to true. Skipping PR creation."
           skip_pr_creation=true
         fi
@@ -168,33 +180,33 @@ runs:
         declare -a COMMAND
         COMMAND+=(gh pr create --base $DESTINATION_BRANCH --head $SOURCE_BRANCH --no-maintainer-edit)
 
-        if [[ ! -z "${ INPUT_pr_title }" ]]; then
-          COMMAND+=(--title "${ INPUT_pr_title }")
+        if [[ ! -z "${INPUT_PR_TITLE}" ]]; then
+          COMMAND+=(--title "${INPUT_PR_TITLE}")
         else
           COMMAND+=(--fill)
         fi
 
-        if [[ ! -z "${ INPUT_pr_body }" ]]; then
-          COMMAND+=(--body "${ INPUT_pr_body }")
+        if [[ ! -z "${INPUT_PR_BODY}" ]]; then
+          COMMAND+=(--body "${INPUT_PR_BODY}")
         fi
 
-        if [[ ! -z "${ INPUT_pr_reviewer }" ]]; then
-          COMMAND+=(--reviewer "${ INPUT_pr_reviewer }")
+        if [[ ! -z "${INPUT_PR_REVIEWER}" ]]; then
+          COMMAND+=(--reviewer "${INPUT_PR_REVIEWER}")
         fi
 
-        if [[ ! -z "${ INPUT_pr_assignee }" ]]; then
-          COMMAND+=(--assignee "${ INPUT_pr_assignee }")
+        if [[ ! -z "${INPUT_PR_ASSIGNEE}" ]]; then
+          COMMAND+=(--assignee "${INPUT_PR_ASSIGNEE}")
         fi
 
-        if [[ ! -z "${ INPUT_pr_label }" ]]; then
-          COMMAND+=(--label "${ INPUT_pr_label }")
+        if [[ ! -z "${INPUT_PR_LABEL}" ]]; then
+          COMMAND+=(--label "${INPUT_PR_LABEL}")
         fi
 
-        if [[ ! -z "${ INPUT_pr_milestone }" ]]; then
-          COMMAND+=(--milestone "${ INPUT_pr_milestone }")
+        if [[ ! -z "${INPUT_PR_MILESTONE}" ]]; then
+          COMMAND+=(--milestone "${INPUT_PR_MILESTONE}")
         fi
 
-        if [[ "${ INPUT_pr_draft }" == "true" ]]; then
+        if [[ "${INPUT_PR_DRAFT}" == "true" ]]; then
           COMMAND+=(--draft)
         fi
 
