@@ -34,6 +34,10 @@ inputs:
   pr_allow_empty:
     description: Create PR even if no changes
     required: false
+  debug:
+    description: Enable debug output
+    required: false
+    default: false
 
 outputs:
   pr_url:
@@ -58,8 +62,53 @@ runs:
         set -e
         set -o pipefail
 
+        # HELPER SYNTAX:
+        #   catch STDOUT_VARIABLE STDERR_VARIABLE COMMAND [ARG1[ ARG2[ ...[ ARGN]]]]
+        catch() {
+            {
+                IFS=$'\n' read -r -d '' "${1}";
+                IFS=$'\n' read -r -d '' "${2}";
+                (IFS=$'\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
+            } < <((printf '\0%s\0%d\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\0' 1>&4-) 4>&2- 2>&1- | tr -d '\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
+        }
+        reset_color="\\e[0m"
+        color_red="\\e[31m"
+        color_green="\\e[32m"
+        color_yellow="\\e[33m"
+        color_blue="\\e[36m"
+        color_gray="\\e[37m"
+        echo_blue() { printf "%b\n" "${color_blue}$(printf "%s\n" "$*")${reset_color}"; }
+        echo_green() { printf "%b\n" "${color_green}$(printf "%s\n" "$*")${reset_color}"; }
+        echo_red() { printf "%b\n" "${color_red}$(printf "%s\n" "$*")${reset_color}"; }
+        echo_yellow() { printf "%b\n" "${color_yellow}$(printf "%s\n" "$*")${reset_color}"; }
+        echo_gray() { printf "%b\n" "${color_gray}$(printf "%s\n" "$*")${reset_color}"; }
+        echo_grey() { printf "%b\n" "${color_gray}$(printf "%s\n" "$*")${reset_color}"; }
+        echo_info() { printf "%b\n" "${color_blue}ℹ $(printf "%s\n" "$*")${reset_color}"; }
+        echo_error() { printf "%b\n" "${color_red}✖ $(printf "%s\n" "$*")${reset_color}"; }
+        echo_warning() { printf "%b\n" "${color_yellow}✔ $(printf "%s\n" "$*")${reset_color}"; }
+        echo_success() { printf "%b\n" "${color_green}✔ $(printf "%s\n" "$*")${reset_color}"; }
+        echo_fail() { printf "%b\n" "${color_red}✖ $(printf "%s\n" "$*")${reset_color}"; }
+        enable_debug() {
+          if [[ "${INPUT_DEBUG}" == "true" ]]; then
+            echo_info "Enabling debug mode."
+            set -x
+          fi
+        }
+        disable_debug() {
+          if [[ "${INPUT_DEBUG}" == "true" ]]; then
+            set +x
+          fi
+        }
+
+        enable_debug
+
+        # init bool var to check if PR creation should be skipped
+        skip_pr_creation=false
+        pr_created=false
+
         echo "::group::Gather Inputs"
-        if [[ ! -z "$GITHUB_HEAD_REF" ]]; then
+
+        if [[ ! -z "$GITHUB_HEAD_REF" && "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
           SOURCE_BRANCH="$GITHUB_HEAD_REF"
         elif [[ ! -z "$INPUT_SOURCE_BRANCH" ]]; then
           SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
@@ -69,16 +118,14 @@ runs:
           echo_fail "Set the INPUT_SOURCE_BRANCH environment variable or trigger from a branch."
           exit 1
         fi
-        echo "SOURCE_BRANCH=$SOURCE_BRANCH"
+        echo_info "SOURCE_BRANCH=$SOURCE_BRANCH"
 
         DESTINATION_BRANCH="${INPUT_DESTINATION_BRANCH:-"main"}"
-        echo "DESTINATION_BRANCH=$DESTINATION_BRANCH"
+        echo_info "DESTINATION_BRANCH=$DESTINATION_BRANCH"
 
-        # init pr_created bool for output
-        echo "pr_created=false" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
-
         echo "::group::Configure git"
+
         # Github actions no longer auto set the username and GITHUB_TOKEN
         git remote set-url origin "https://$GITHUB_ACTOR:$GITHUB_TOKEN@${GITHUB_SERVER_URL#https://}/$GITHUB_REPOSITORY"
 
@@ -89,24 +136,30 @@ runs:
         git --no-pager branch -a -vv
 
         echo "::endgroup::"
-
         echo "::group::Ensure pull-request contains differences"
+
         SOURCE_REV=$(git rev-parse --revs-only "$SOURCE_BRANCH")
         DESTINATION_REV=$(git rev-parse --revs-only "$DESTINATION_BRANCH")
         if [ "$SOURCE_REV" = "$DESTINATION_REV" ]; then
-          echo "Source and destination branches are the same. Source rev: $SOURCE_REV, Destination rev: $DESTINATION_REV"
-          exit 0
+          echo_info "Source and destination branches are the same. Source rev: $SOURCE_REV, Destination rev: $DESTINATION_REV. Skipping PR creation."
+          skip_pr_creation=true
         fi
 
-        # Do not proceed if there are no file differences, this avoids PRs with just a merge commit and no content
+        # skip pr creation if there are no file differences, this avoids PRs with just a merge commit and no content
         LINES_CHANGED=$(git diff --name-only "$DESTINATION_BRANCH" "$SOURCE_BRANCH" -- | wc -l | awk '{print $1}')
         if [[ "$LINES_CHANGED" = "0" ]] && [[ ! "${{ inputs.pr_allow_empty }}" ==  "true" ]]; then
-          echo "No file changes detected between source and destination branches."
-          exit 0
+          echo_info "No file changes detected between source and destination branches and pr_allow_empty is not set to true. Skipping PR creation."
+          skip_pr_creation=true
         fi
-        echo "::endgroup::"
+        if [[ "$LINES_CHANGED" = "0" ]]; then
+          has_changed_files=false
+        else
+          has_changed_files=true
+        fi
 
+        echo "::endgroup::"
         echo "::group::Assemble gh pr parameters"
+
         # Workaround for `hub` auth error https://github.com/github/hub/issues/2149#issuecomment-513214342
         export GITHUB_USER="$GITHUB_ACTOR"
 
@@ -143,51 +196,50 @@ runs:
           COMMAND+=(--draft)
         fi
 
-        echo "Command that will be executed: ${COMMAND[@]}"
         echo "::endgroup::"
-
-        # SYNTAX:
-        #   catch STDOUT_VARIABLE STDERR_VARIABLE COMMAND [ARG1[ ARG2[ ...[ ARGN]]]]
-        catch() {
-            {
-                IFS=$'\n' read -r -d '' "${1}";
-                IFS=$'\n' read -r -d '' "${2}";
-                (IFS=$'\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
-            } < <((printf '\0%s\0%d\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\0' 1>&4-) 4>&2- 2>&1- | tr -d '\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
-        }
-
         echo "::group::Create pull request $SOURCE_BRANCH -> $DESTINATION_BRANCH"
-        set +e
-        catch pr_command_output pr_command_error "${COMMAND[@]}"
-        pr_command_exit_code=$?
-        set -e
-        echo "Output of github cli command: " ${pr_command_output} ${pr_command_error}
-        echo "::endgroup::"
 
-        echo "::group::Set outputs"
-        pr_already_exists=$(echo "${pr_command_error}" | grep -c "already exists:")
-        if [[ "$pr_command_exit_code" -eq 0 ]];
-        then
-          pr_url="${pr_command_output}"
-          pr_number="${pr_command_output##*/}"
-        elif [[ "$pr_already_exists" -eq 1 ]];
-        then
-          pr_url=$(echo "$pr_command_error" | grep -o 'https://github.com[^ ]*')
-          pr_number=${pr_url##*/}
+        pr_command_exit_code=0
+        pr_already_exists=-1
+        if [[ "$skip_pr_creation" = "false" ]]; then
+          echo_info "Command that will be executed: ${COMMAND[@]}"
+          set +e
+          catch pr_command_output pr_command_error "${COMMAND[@]}"
+          pr_command_exit_code=$?
+          set -e
+          echo_info "Output of github cli command: " ${pr_command_output} ${pr_command_error}
+
+          pr_already_exists=$(echo "${pr_command_error}" | grep -c "already exists:")
+          if [[ "$pr_command_exit_code" -eq 0 ]];
+          then
+            pr_url="${pr_command_output}"
+            pr_number="${pr_command_output##*/}"
+          elif [[ "$pr_already_exists" -eq 1 ]];
+          then
+            pr_url=$(echo "$pr_command_error" | grep -o 'https://github.com[^ ]*')
+            pr_number=${pr_url##*/}
+          fi
+
+          if [[ "$pr_command_exit_code" != "0" && "$pr_already_exists" -eq 0 ]]; then
+            echo_error "Failed to create pull request. Exit code: $pr_command_exit_code. Error: $pr_command_error"
+          else
+            # assume that if we got here, a PR was created or exists
+            echo_success "Pull request created or exists: $pr_url"
+            pr_created=true
+          fi
         fi
+
+        echo "::endgroup::"
+        echo "::group::Set outputs"
+
+        echo "pr_created=${pr_created}" >> "$GITHUB_OUTPUT"
         echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
         echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
-        if [[ "$LINES_CHANGED" = "0" ]]; then
-          echo "has_changed_files=false" >> "$GITHUB_OUTPUT"
-        else
-          echo "has_changed_files=true" >> "$GITHUB_OUTPUT"
-        fi
-        if [[ "$pr_command_exit_code" != "0" && "$pr_already_exists" -eq 0 ]]; then
-          exit 1
-        fi
-        # assume that if we got here, a PR was created
-        echo "pr_created=true" >> "$GITHUB_OUTPUT"
+        echo "has_changed_files=${has_changed_files}" >> "$GITHUB_OUTPUT"
+        cat $GITHUB_OUTPUT
+
         echo "::endgroup::"
+
       shell: bash
 
 branding:
