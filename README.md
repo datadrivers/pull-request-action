@@ -1,6 +1,6 @@
 # Pull Request Action
 
-[![Action test on Ubuntu](https://github.com/datadrivers/pull-request-action/actions/workflows/ubuntu_action_test.yml/badge.svg)](https://github.com/datadrivers/pull-request-action/actions/workflows/ubuntu_action_test.yml) [![Action test on MacOS](https://github.com/datadrivers/pull-request-action/actions/workflows/macos_action_test.yml/badge.svg)](https://github.com/datadrivers/pull-request-action/actions/workflows/macos_action_test.yml) [![Action test on Windows](https://github.com/datadrivers/pull-request-action/actions/workflows/windows_action_test.yml/badge.svg)](https://github.com/datadrivers/pull-request-action/actions/workflows/windows_action_test.yml)
+[![Action tests](https://github.com/datadrivers/pull-request-action/actions/workflows/tests.yml/badge.svg)]
 
 ![](https://user-images.githubusercontent.com/22433243/157692326-2e75f43d-e563-4fa9-8947-67c06e4e469f.png)
 
