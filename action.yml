@@ -183,14 +183,11 @@ runs:
         declare -a COMMAND
         COMMAND+=(gh pr create --base $DESTINATION_BRANCH --head $SOURCE_BRANCH --no-maintainer-edit)
 
-        if [[ ! -z "${INPUT_PR_TITLE}" ]]; then
-          COMMAND+=(--title "${INPUT_PR_TITLE}")
-        else
+        if [[ -z "${INPUT_PR_TITLE}" ]] && [[ -z "${INPUT_PR_BODY}" ]]; then
           COMMAND+=(--fill)
-        fi
-
-        if [[ ! -z "${INPUT_PR_BODY}" ]]; then
-          COMMAND+=(--body "${INPUT_PR_BODY}")
+        else
+          [[ -n "${INPUT_PR_TITLE}" ]] && COMMAND+=(--title "${INPUT_PR_TITLE}") || COMMAND+=(--fill)
+          [[ -n "${INPUT_PR_BODY}" ]] && COMMAND+=(--body "${INPUT_PR_BODY}") || COMMAND+=(--fill)
         fi
 
         if [[ ! -z "${INPUT_PR_REVIEWER}" ]]; then
