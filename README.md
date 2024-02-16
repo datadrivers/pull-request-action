@@ -59,6 +59,14 @@ _Original Code from [github.com/GuillaumeFalourd/pull-request-action](https://gi
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}         # Can use PAT as secret
 ```
 
+## 🧩 Outputs
+
+Field | Observation
+------------ | ------------ 
+`pr_url` | Pull request URL
+`pr_number` | Pull request number
+`has_changed_files` | Boolean string indicating whether any file has been changed
+`pr_created` | Boolean string indicating whether a PR was created
 ## 🤝 Contributing
 
 ☞ If you're interested in contributing to this repository, please follow the [guidelines](https://github.com/datadrivers/pull-request-action/blob/main/CONTRIBUTING.md)
