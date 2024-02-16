@@ -22,16 +22,20 @@ jobs:
           fetch-depth: 0
       - uses: ./
         name: test-min
+        if: failure() || success()
       - uses: ./
         name: test-title-only
+        if: failure() || success()
         with:
           pr_title: "Pulling ${{ github.ref_name }} into main"
       - uses: ./
         name: test-body-only
+        if: failure() || success()
         with:
           pr_body: "Pulling ${{ github.ref_name }} into main"
       - uses: ./
         name: test-max
+        if: failure() || success()
         with:
           pr_title: "Pulling ${{ github.ref }} into main"
           pr_body: "An automated PR"
