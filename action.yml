@@ -239,6 +239,7 @@ runs:
 
           if [[ "$pr_command_exit_code" != "0" && "$pr_already_exists" -eq 0 ]]; then
             echo_error "Failed to create pull request. Exit code: $pr_command_exit_code. Error: $pr_command_error"
+            exit $pr_command_exit_code
           else
             # assume that if we got here, a PR was created or exists
             echo_success "Pull request created or exists: $pr_url"
@@ -256,7 +257,6 @@ runs:
         cat "$GITHUB_OUTPUT"
 
         echo "::endgroup::"
-
 
 branding:
   icon: 'git-pull-request'
